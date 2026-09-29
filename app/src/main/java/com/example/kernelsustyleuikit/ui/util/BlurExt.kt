@@ -1,0 +1,50 @@
+package com.example.kernelsustyleuikit.ui.util
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import top.yukonga.miuix.kmp.blur.BlendColorEntry
+import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.textureBlur
+import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+@Composable
+fun rememberBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
+    if (!enableBlur || !isRenderEffectSupported()) return null
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    return rememberLayerBackdrop {
+        drawRect(surfaceColor)
+        drawContent()
+    }
+}
+
+@Composable
+fun BlurredBar(
+    backdrop: LayerBackdrop?,
+    blurActive: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = if (blurActive && backdrop != null) {
+            Modifier.textureBlur(
+                backdrop = backdrop,
+                shape = RectangleShape,
+                // 半径 32 + 遮罩 alpha 0.62：alpha 再高会把模糊整个盖住，肉眼不可辨
+                blurRadius = 32f,
+                colors = BlurColors(
+                    blendColors = listOf(
+                        BlendColorEntry(color = MiuixTheme.colorScheme.surface.copy(0.62f)),
+                    ),
+                ),
+            )
+        } else {
+            Modifier
+        },
+    ) {
+        content()
+    }
+}

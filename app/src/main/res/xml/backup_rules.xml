@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 及以下的备份规则。
+
+  本项目 minSdk = 31，该文件在当前配置下不会生效（API 31+ 使用
+  data_extraction_rules.xml），此处同步排除条件是为了将来下调 minSdk
+  时不会意外把凭据纳入备份。
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="cc_sessions.xml" />
+    <exclude domain="sharedpref" path="cc_settings.xml" />
+</full-backup-content>

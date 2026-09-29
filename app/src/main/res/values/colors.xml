@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      桌面图标：前景全部复用 @drawable/ic_launcher_foreground，
+      只换背景色派生不同样式，因此新增一款图标只需在这里加一个颜色 +
+      一个 mipmap-anydpi 描述文件 + Manifest 里一个 activity-alias。
+    -->
+    <!-- 浅色（默认）：白底 -->
+    <color name="ic_launcher_background">#FFFFFFFF</color>
+    <!-- 深色：黑底 -->
+    <color name="ic_launcher_background_dark">#FF000000</color>
+    <!-- 深蓝 -->
+    <color name="ic_launcher_background_indigo">#FF1A237E</color>
+    <!-- 青绿 -->
+    <color name="ic_launcher_background_teal">#FF00695C</color>
+    <!-- 橙色 -->
+    <color name="ic_launcher_background_amber">#FFE65100</color>
+    <!-- 紫色 -->
+    <color name="ic_launcher_background_violet">#FF4A148C</color>
+</resources>

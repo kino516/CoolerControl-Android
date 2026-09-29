@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  云备份与换机迁移的排除规则（Android 12 / API 31+）。
+
+  必须显式排除这两份 SharedPreferences：
+  - cc_sessions.xml：会话 Cookie 是**明文**凭据，可绕过密码直接调用 daemon API
+  - cc_settings.xml：含 passwordEnc，但 Keystore 密钥设备绑定且不参与备份，
+    还原到新机后必然解密失败，留着只会让用户看到一条无用的服务器记录
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="cc_sessions.xml" />
+        <exclude domain="sharedpref" path="cc_settings.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="cc_sessions.xml" />
+        <exclude domain="sharedpref" path="cc_settings.xml" />
+    </device-transfer>
+</data-extraction-rules>
