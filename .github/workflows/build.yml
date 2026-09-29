@@ -30,12 +30,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # ubuntu-latest 已预装 Android SDK（含 cmdline-tools），这里只补装项目需要的
-      # API 37 与 Build Tools 37.0.0。
-      # 不使用 android-actions/setup-android：该 action 仍停留在 Node.js 20 时代，
+      # ubuntu-latest 预装的 Android SDK 已包含本项目需要的
+      # platforms/android-37.0 与 build-tools/37.0.0，正常情况下无需安装；
+      # 万一将来 runner 镜像变动，这里按需补装。
+      # 不使用 android-actions/setup-android：该 action 仍面向 Node.js 20，
       # 在 runner 上被强制跑在 Node 24 下会直接失败。
-      # 稳定渠道取不到时回退 canary 渠道；失败原因以注解形式抛出，便于排查。
-      - name: Install Android SDK components
+      - name: Locate Android SDK
         run: |
           SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           if [ ! -d "$SDK_ROOT" ]; then
@@ -45,28 +45,16 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
 
-          SDKMANAGER="$(find "$SDK_ROOT" -type f -name sdkmanager 2>/dev/null | sort | tail -1)"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "::error title=sdkmanager 缺失::在 $SDK_ROOT 下未找到 sdkmanager"
-            exit 1
-          fi
+          echo "::notice title=platforms::$(ls "$SDK_ROOT/platforms" | tr '\n' ' ')"
+          echo "::notice title=build-tools::$(ls "$SDK_ROOT/build-tools" | tr '\n' ' ')"
 
-          echo "::notice title=sdkmanager::$SDKMANAGER"
-          echo "::notice title=预装 platforms::$(ls "$SDK_ROOT/platforms" 2>/dev/null | tr '\n' ' ')"
-          echo "::notice title=预装 build-tools::$(ls "$SDK_ROOT/build-tools" 2>/dev/null | tr '\n' ' ')"
-
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-
-          PKGS=("platforms;android-37" "build-tools;37.0.0")
-
-          if "$SDKMANAGER" "${PKGS[@]}" > /tmp/sdk.log 2>&1; then
-            echo "::notice title=SDK 安装成功（稳定渠道）::$(ls "$SDK_ROOT/platforms" | tr '\n' ' ')"
-          else
-            echo "::warning title=稳定渠道安装失败::$(tail -6 /tmp/sdk.log | tr '\n' '~' | cut -c1-600)"
-            if "$SDKMANAGER" --channel=3 "${PKGS[@]}" > /tmp/sdk-canary.log 2>&1; then
-              echo "::notice title=SDK 安装成功（canary 渠道）::$(ls "$SDK_ROOT/platforms" | tr '\n' ' ')"
-            else
-              echo "::error title=SDK 安装失败::$(tail -12 /tmp/sdk-canary.log | tr '\n' '~' | cut -c1-900)"
+          # 注意：官方 API 37 的目录名带 minor（android-37.0），没有裸的 android-37
+          if ! ls -d "$SDK_ROOT"/platforms/android-37* > /dev/null 2>&1; then
+            echo "::warning title=缺少 API 37 平台::尝试补装 platforms;android-37.0"
+            SDKMANAGER="$(find "$SDK_ROOT" -type f -name sdkmanager 2>/dev/null | sort | tail -1)"
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            if ! "$SDKMANAGER" "platforms;android-37.0" "build-tools;37.0.0"; then
+              echo "::error title=SDK 补装失败::可用平台为 $(yes | "$SDKMANAGER" --list 2>/dev/null | grep -oE 'platforms;android-3[0-9.]+' | sort -u | tail -8 | tr '\n' ' ')"
               exit 1
             fi
           fi
