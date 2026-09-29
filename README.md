@@ -41,7 +41,7 @@
 
 ## 截图
 
-> 截图待补充。欢迎提交 PR 帮忙补充各界面截图。
+> 截图待补充。界面截图建议放在 `docs/assets/screenshots/`（Miuix 与 Material 各一套），欢迎提交 PR。
 
 ---
 
@@ -86,11 +86,13 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 ./gradlew :app:assembleDebug
 ```
 
-产物：`app/build/outputs/apk/debug/app-debug.apk`
+产物：`app/build/outputs/apk/debug/CoolerControl_1.0.0_1-debug.apk`
+
+> 文件名由 `app/build.gradle.kts` 的 `base.archivesName` 决定，格式为 `CoolerControl_<versionName>_<versionCode>`。
 
 ### 发布版签名
 
-release 构建通过 `local.properties` 或 `~/.gradle/gradle.properties` 读取签名配置：
+签名由 `org.lsposed.lsplugin.apksign` 插件读取 **Gradle 属性**，请在用户级 `~/.gradle/gradle.properties` 中配置（该文件不进仓库）：
 
 ```properties
 KEYSTORE_FILE=/absolute/path/to/your.jks
@@ -106,7 +108,10 @@ keytool -genkeypair -v -keystore your.jks \
   -alias your-alias -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-> ⚠️ 未配置时 release 会回退到 **debug 签名**，该签名是公开的，**请勿用于正式发布**。
+> ⚠️ **写在 `local.properties` 里是无效的** —— 该文件供 AGP 读取 SDK 路径，插件看不到它。
+> 也可用命令行临时传入：`./gradlew :app:assembleRelease -PKEYSTORE_FILE=... -PKEYSTORE_PASSWORD=... -PKEY_ALIAS=... -PKEY_PASSWORD=...`
+>
+> ⚠️ 未配置时 release 仍能构建成功，但会回退到 **debug 签名**（实测证书为 `CN=Android Debug`），该签名是公开的，**请勿用于正式发布**。
 >
 > 参考字段名见 `sign.example.properties`。
 
@@ -144,13 +149,15 @@ keytool -genkeypair -v -keystore your.jks \
 ```
 app/src/main/java/com/example/kernelsustyleuikit/
 ├── data/
+│   ├── CcGraph.kt    轻量服务定位器（lazy 单例，未引入 DI 框架）
 │   ├── local/        本地存储（SharedPreferences、Keystore 加密、桌面图标）
 │   ├── model/        数据模型与解析
 │   ├── remote/       OkHttp 客户端、Cookie 管理、SSE、网络绑定
-│   ├── repository/   数据仓库
+│   ├── repository/   数据仓库（CcRepository 是唯一数据源）
 │   └── session/      会话管理与端点探测
 ├── ui/
 │   ├── component/    自定义组件（含 cc/ 业务组件）
+│   ├── navigation3/  路由声明与导航（Routes.kt / Navigator.kt）
 │   ├── screen/       各页面（Miuix / Material 双实现）
 │   ├── theme/        主题
 │   ├── util/         格式化与工具
@@ -169,10 +176,10 @@ app/src/main/java/com/example/kernelsustyleuikit/
 提交前请确保：
 
 ```bash
-./gradlew :app:assembleRelease
+./gradlew :app:assembleDebug :app:assembleRelease
 ```
 
-能够通过，且未引入新的 lint 错误。
+能够通过，且未引入新的 lint 错误。推送到 `main` 或提 PR 时，GitHub Actions 会自动跑一遍同样的构建。
 
 ---
 
