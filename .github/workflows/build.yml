@@ -33,12 +33,13 @@ jobs:
       # ubuntu-latest 已预装 Android SDK（含 cmdline-tools），这里只补装项目需要的
       # API 37 与 Build Tools 37.0.0。
       # 不使用 android-actions/setup-android：该 action 仍停留在 Node.js 20 时代，
-      # 在 runner 上被强制跑在 Node 24 下会直接失败（见 run #1）。
+      # 在 runner 上被强制跑在 Node 24 下会直接失败。
+      # 稳定渠道取不到时回退 canary 渠道；失败原因以注解形式抛出，便于排查。
       - name: Install Android SDK components
         run: |
           SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           if [ ! -d "$SDK_ROOT" ]; then
-            echo "::error::未找到预装 Android SDK：$SDK_ROOT"
+            echo "::error title=Android SDK 缺失::$SDK_ROOT 不存在"
             exit 1
           fi
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
@@ -46,16 +47,29 @@ jobs:
 
           SDKMANAGER="$(find "$SDK_ROOT" -type f -name sdkmanager 2>/dev/null | sort | tail -1)"
           if [ -z "$SDKMANAGER" ]; then
-            echo "::error::在 $SDK_ROOT 下未找到 sdkmanager"
+            echo "::error title=sdkmanager 缺失::在 $SDK_ROOT 下未找到 sdkmanager"
             exit 1
           fi
-          echo "使用 sdkmanager: $SDKMANAGER"
 
-          yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0"
+          echo "::notice title=sdkmanager::$SDKMANAGER"
+          echo "::notice title=预装 platforms::$(ls "$SDK_ROOT/platforms" 2>/dev/null | tr '\n' ' ')"
+          echo "::notice title=预装 build-tools::$(ls "$SDK_ROOT/build-tools" 2>/dev/null | tr '\n' ' ')"
 
-          echo "--- 已安装的 platforms / build-tools ---"
-          ls "$SDK_ROOT/platforms" "$SDK_ROOT/build-tools" || true
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+
+          PKGS=("platforms;android-37" "build-tools;37.0.0")
+
+          if "$SDKMANAGER" "${PKGS[@]}" > /tmp/sdk.log 2>&1; then
+            echo "::notice title=SDK 安装成功（稳定渠道）::$(ls "$SDK_ROOT/platforms" | tr '\n' ' ')"
+          else
+            echo "::warning title=稳定渠道安装失败::$(tail -6 /tmp/sdk.log | tr '\n' '~' | cut -c1-600)"
+            if "$SDKMANAGER" --channel=3 "${PKGS[@]}" > /tmp/sdk-canary.log 2>&1; then
+              echo "::notice title=SDK 安装成功（canary 渠道）::$(ls "$SDK_ROOT/platforms" | tr '\n' ' ')"
+            else
+              echo "::error title=SDK 安装失败::$(tail -12 /tmp/sdk-canary.log | tr '\n' '~' | cut -c1-900)"
+              exit 1
+            fi
+          fi
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
